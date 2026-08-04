@@ -3,7 +3,7 @@ import * as auth_service from "../services/auth.service.js";
 import * as char_service from "../services/character.service.js";
 import { signAccessToken } from "../lib/jwt.js";
 import type { DeleteAccountInput, SignupInput } from "../types/schema.js";
-import { CONFLICT, INVALID_CREDENTIALS } from "../lib/error.js";
+import { CONFLICT, INVALID_CREDENTIALS, UNAUTHORIZED } from "../lib/error.js";
 import bcrypt from "bcryptjs";
 
 
@@ -100,13 +100,15 @@ export const getMyInfo = async (req: Request, res: Response) => {
 export const deleteMyAccount = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const {password} = req.body as DeleteAccountInput;
-    if (!userId) throw new INVALID_CREDENTIALS("로그인 실패");
+    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
 
     const user = await auth_service.findUserById(userId);
-    if (!user) throw new INVALID_CREDENTIALS("로그인 실패");
+    if (!user) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+
+    if (!(await bcrypt.compare(password, user.passwordHash))) throw new INVALID_CREDENTIALS("비밀번호가 올바르지 않습니다.");
 
     await auth_service.deleteUserById(userId);
 
-    res.status(204);
+    res.status(204).send();
 }
 

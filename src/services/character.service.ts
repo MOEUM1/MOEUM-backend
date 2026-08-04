@@ -14,6 +14,16 @@ export const getCharacterLevelByCharacterId = async (characterId: string) => {
     })
 }
 
+export const updateCharacter = async (userId: string, data: { name?: string; description?: string }) => {
+    return await prisma.character.update({
+        where: { userId },
+        data,
+        include: {
+            characterLevel: true,
+        }
+    })
+}
+
 export const createCharacter = async (userId: string, name: string) => {
     return await prisma.character.create({
         data: {

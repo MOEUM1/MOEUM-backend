@@ -33,3 +33,28 @@ export const getTopCharacterLevels = async (limit: number) => {
 export const countRankedCharacters = async () => {
     return await prisma.characterLevel.count()
 }
+
+
+/**
+ * 내 순위 - 나보다 totalExp가 높은 사람 수 + 1
+ */
+export const getMyRank = async (userId: string) => {
+    const character = await prisma.character.findUnique({
+        where: { userId },
+        include: { characterLevel: true },
+    })
+
+    if (!character || !character.characterLevel) return null;
+
+    const higher = await prisma.characterLevel.count({
+        where: { totalExp: { gt: character.characterLevel.totalExp } },
+    })
+
+    return {
+        rank: higher + 1,
+        characterName: character.name,
+        level: character.characterLevel.level,
+        exp: character.characterLevel.exp,
+        totalExp: character.characterLevel.totalExp,
+    }
+}

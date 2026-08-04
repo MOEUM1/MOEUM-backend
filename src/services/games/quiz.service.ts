@@ -5,6 +5,7 @@ import { client } from "../../lib/openai.js";
 import { prisma } from "../../lib/prisma.js";
 import { QuizGameQuestionsResponseSchema, QuizGameResultSchema, type QuizGameQuestionType, type QuizGameResultReqType, type QuizGameResultType } from "../../types/schema.js";
 import { getGameHistoryById } from "./index.service.js";
+import { withUserContext } from "../../lib/prompt.js";
 
 
 
@@ -24,9 +25,12 @@ export const createQuizGameHistory = async (userId:string) => {
 
 // TODO: 사용자 subject 기반으로 퀴즈 생성하기
 
-export const generateQuizGameQuestions = async (subject:string) => {
+export const generateQuizGameQuestions = async (subject:string, context:string) => {
     const conv = await client.conversations.create()
-    const prompt = `내가 공부하는 분야는 ${subject}이야. 너는 형식에 맞게 문제 5개를 내야해, 뒤로 갈수록 점점 어려워지고 평균적으로 절반정도 맞을 정도의 난이도로 조절해줘`;
+    const prompt = withUserContext(
+        context,
+        `내가 공부하는 분야는 ${subject}이야. 너는 형식에 맞게 문제 5개를 내야해, 뒤로 갈수록 점점 어려워지고 평균적으로 절반정도 맞을 정도의 난이도로 조절해줘`
+    );
     const response = await client.responses.parse({
         model: env.OPENAI_MODEL,
         input: prompt,

@@ -1,7 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import type { Request, Response } from "express";
-import { ErrorHandler } from "./middlewares/error.middleware.js";
+import { ErrorHandler, NotFoundHandler } from "./middlewares/error.middleware.js";
 import { configurePassport } from "./passport/jwt.strategy.js";
 import passport from "passport";
 import authRouter from "./routes/auth.route.js";
@@ -21,7 +21,7 @@ configurePassport();
 app.use(passport.initialize());
 
 app.use("/api/health", (_req:Request, res:Response) => {
-    res.status(200).json({ status: "ok" });
+    res.status(200).json({ status: "ok", version: "1.0.0" });
 })
 
 app.use("/api/auth", authRouter);
@@ -34,6 +34,7 @@ app.use("/api/leagues", leagueRouter);
 
 
 //여기서부턴 에러 핸들러
+app.use(NotFoundHandler);
 app.use(ErrorHandler);
 
 

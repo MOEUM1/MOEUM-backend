@@ -1,40 +1,26 @@
 import type { Request, Response } from "express";
 import * as league_service from "../services/league.service.js";
-import { HttpError, UNAUTHORIZED } from "../lib/error.js";
+import { NOT_FOUND_CHARACTER, UNAUTHORIZED } from "../lib/error.js";
+import type { LeagueTopQueryType } from "../types/schema.js";
 
 
-const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
-
-
-/**
- * 내 순위 조회
- */
 export const getMyRank = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const [me, totalUsers] = await Promise.all([
         league_service.getMyRank(userId),
         league_service.countRankedCharacters(),
     ]);
 
-    if (!me) throw new HttpError(404, "NOT_FOUND", "캐릭터를 찾을 수 없습니다.");
+    if (!me) throw new NOT_FOUND_CHARACTER();
 
     res.status(200).json({ totalUsers, ...me });
 }
 
 
-/**
- * 상위 N명 랭킹 조회 (기본 10명) - 레벨과 경험치를 함께 내려준다.
- */
-export const getTopRanking = async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
-
-    const raw = req.query["limit"];
-    const parsed = typeof raw === "string" ? Number(raw) : Number.NaN;
-    const limit = Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, MAX_LIMIT) : DEFAULT_LIMIT;
+export const getTopRanking = async (_req: Request, res: Response) => {
+    const { limit } = res.locals["query"] as LeagueTopQueryType;
 
     const [top, totalUsers] = await Promise.all([
         league_service.getTopCharacterLevels(limit),

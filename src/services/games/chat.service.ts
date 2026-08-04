@@ -1,7 +1,9 @@
 import { env } from "../../config.js";
 import { client } from "../../lib/openai.js";
+import { prisma } from "../../lib/prisma.js";
 import { createGameHistory } from "./index.service.js";
 import { trimContext } from "../../lib/prompt.js";
+import type { ChatGameResultType } from "../../types/schema.js";
 
 
 export const initExamGame = async (userId:string, subject:string, context:string) => {
@@ -17,7 +19,7 @@ export const initExamGame = async (userId:string, subject:string, context:string
 
     const response = await client.responses.create({
         model: env.OPENAI_MODEL,
-        // 첫 응답도 conversation에 붙여야 이후 턴에서 AI가 자기 첫 질문을 기억한다.
+        // 첫 응답도 conversation에 붙여야 이후 턴에서 문맥이 이어진다.
         conversation: cv.id,
         input: [
             {role: "developer", content: `너는 유저와 함께 ${subject}에 대해 배우고 있는 AI야`},
@@ -27,7 +29,6 @@ export const initExamGame = async (userId:string, subject:string, context:string
             {role: "developer", content: `만약 유저가 이해하지 못한 부분에 대해 질문을 바꿔서 유저가 몰랐던 질문에 대한 대답을 알아냈다면, 기존의 문제가 된 질문과 같은걸 다시 질문하되, 교묘하게 바꿔놔줘`},
             {role: "developer", content: `여기서 유저가 적절한 대답을 내놓으면 이 질문의 주제에 대해선 사용자가 이해한걸로 판단하고 ${subject}의 다음 질문으로 넘어가`},
             {role: "developer", content: `만약 계속해서 답을 내놓지 못한 경우 적당히 하다가 이 유저는 이 주제에 대해 이걸 복습해야된다고 생각하고 ${subject}의 다음 질문으로 넘어가`},
-            // 지금까지의 학습 분석을 먼저 알려주고 질문을 받는다. 첫 게임이면 생략된다.
             ...(trimmedContext
                 ? [{
                     role: "developer" as const,
@@ -38,6 +39,14 @@ export const initExamGame = async (userId:string, subject:string, context:string
         ]
     })
     return {studyHistory, conversationId: cv.id, response}
+}
+
+
+export const setChatGameResult = async (studyHistoryId:string, result:ChatGameResultType) => {
+    return await prisma.studyHistory.update({
+        where: { id: studyHistoryId },
+        data: { result },
+    })
 }
 
 

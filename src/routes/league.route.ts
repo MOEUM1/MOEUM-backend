@@ -8,6 +8,7 @@ const router = Router();
 
 // GET /api/leagues/top?limit=10 - 상위 N명의 레벨/경험치
 router.get("/top", requireAuth, controller.getTopRanking);
+router.get("/me", requireAuth, controller.getMyRank);
 
 
 export default router;

@@ -2,6 +2,10 @@ import type { Request, Response } from "express";
 import * as auth_service from "../../services/auth.service.js";
 import * as card_service from "../../services/games/card.service.js";
 import * as game_service from "../../services/games/index.service.js";
+import * as analyze_service from "../../services/analyze.service.js";
+import * as streak_service from "../../services/streak.service.js";
+import * as level_service from "../../services/level.service.js";
+import { calcGameExp } from "../../lib/exp.js";
 import { HttpError, NOT_FOUND_HISTORY, UNAUTHORIZED } from "../../lib/error.js";
 import type { CardGameQuestionType, CardGameResultReqType, CardGameResultType } from "../../types/schema.js";
 
@@ -20,8 +24,11 @@ export const startCardGame = async (req: Request, res: Response) => {
     const subject = user.category[0];
     if (!subject) throw new HttpError(400, "NO_CATEGORY", "학습 분야가 설정되어 있지 않습니다.");
 
+    // 지금까지의 학습 분석을 먼저 알려주고 문제를 받는다.
+    const context = await analyze_service.getUserContextText(userId);
+
     const history = await game_service.createGameHistory(userId, "CARD");
-    const questions = await card_service.generateCardGameQuestions(subject);
+    const questions = await card_service.generateCardGameQuestions(subject, context);
     await card_service.setCardGameQuestions(history.id, questions);
 
     res.status(201).json({
@@ -52,6 +59,11 @@ export const submitCardGame = async (req: Request, res: Response) => {
 
     const result: CardGameResultType = { endTime, correctIndex, wrongIndex, questions };
     await card_service.setCardGameResult(historyId, result);
+    await streak_service.touchStreak(userId);
+
+    const solved = correctIndex.length + wrongIndex.length;
+    const accuracy = solved > 0 ? correctIndex.length / solved : 0;
+    const levelUp = await level_service.addExp(userId, calcGameExp("CARD", accuracy));
 
     res.status(200).json({
         historyId,
@@ -59,5 +71,9 @@ export const submitCardGame = async (req: Request, res: Response) => {
         wrongCount: wrongIndex.length,
         totalCount: questions.length,
         questions,
+        levelUp,
     });
+
+    // 응답을 보낸 뒤 최근 게임 기반 분석을 백그라운드로 실행한다.
+    analyze_service.runAnalyzeInBackground(userId);
 }

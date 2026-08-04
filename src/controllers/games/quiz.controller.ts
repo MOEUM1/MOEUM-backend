@@ -7,7 +7,7 @@ import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
 import { calcGameExp } from "../../lib/exp.js";
 import { HttpError, NOT_FOUND_HISTORY, UNAUTHORIZED } from "../../lib/error.js";
-import type { QuizGameResultReqType } from "../../types/schema.js";
+import type { QuizGameQuestionType, QuizGameResultReqType } from "../../types/schema.js";
 
 
 /**
@@ -56,14 +56,18 @@ export const submitQuizGame = async (req: Request, res: Response) => {
     await quiz_service.setQuizGameResult(body.historyId, graded);
     await streak_service.touchStreak(userId);
 
-    const solved = graded.correctCount + graded.wrongCount;
-    const accuracy = solved > 0 ? graded.correctCount / solved : 0;
+    // 분모는 채점된 문항 수가 아니라 출제된 문항 수다.
+    // 채점 수로 나누면 5문제 중 1문제만 답하고 맞혔을 때 정답률이 100%가 된다.
+    const questions = (history.question ?? []) as QuizGameQuestionType;
+    const totalCount = questions.length;
+    const accuracy = totalCount > 0 ? graded.correctCount / totalCount : 0;
     const levelUp = await level_service.addExp(userId, calcGameExp("QUIZ", accuracy));
 
     res.status(200).json({
         historyId: body.historyId,
         correctCount: graded.correctCount,
         wrongCount: graded.wrongCount,
+        totalCount,
         grade: graded.grade,
         endTime: graded.endTime,
         levelUp,

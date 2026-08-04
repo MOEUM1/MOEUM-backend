@@ -36,7 +36,11 @@ export const countRankedCharacters = async () => {
 
 
 /**
- * 내 순위 - 나보다 totalExp가 높은 사람 수 + 1
+ * 내 순위 - 랭킹 목록과 같은 기준으로 "나보다 앞선 사람" 수 + 1
+ *
+ * getTopCharacterLevels 는 totalExp desc -> createdAt asc 로 정렬한다.
+ * totalExp 만 비교하면 동점자가 전부 같은 순위로 나와서, 목록에서는 3위인 사람이
+ * /leagues/me 에서는 1위로 보이는 불일치가 생긴다. 동점 시 createdAt 까지 함께 비교한다.
  */
 export const getMyRank = async (userId: string) => {
     const character = await prisma.character.findUnique({
@@ -46,8 +50,15 @@ export const getMyRank = async (userId: string) => {
 
     if (!character || !character.characterLevel) return null;
 
+    const { totalExp, createdAt } = character.characterLevel;
+
     const higher = await prisma.characterLevel.count({
-        where: { totalExp: { gt: character.characterLevel.totalExp } },
+        where: {
+            OR: [
+                { totalExp: { gt: totalExp } },
+                { totalExp, createdAt: { lt: createdAt } },
+            ],
+        },
     })
 
     return {

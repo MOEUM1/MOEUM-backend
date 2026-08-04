@@ -96,8 +96,14 @@ export const QuizGameResultSchema = z.object({
     }))
 })
 
+// AI 채점 출력용. endTime을 뺀 이유 두 가지:
+//  1) z.date()는 JSON Schema로 표현할 수 없어 zodTextFormat이 예외를 던진다
+//  2) 종료 시각은 요청의 endAt을 써야 한다. AI가 지어낸 시각을 저장할 이유가 없다
+export const QuizGameGradeSchema = QuizGameResultSchema.omit({ endTime: true })
+
 export type QuizGameQuestionType = z.infer<typeof QuizGameQuestionSchema>
 export type QuizGameResultType = z.infer<typeof QuizGameResultSchema>
+export type QuizGameGradeType = z.infer<typeof QuizGameGradeSchema>
 
 
 // ---------- req용 ----------

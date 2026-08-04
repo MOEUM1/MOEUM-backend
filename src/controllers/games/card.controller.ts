@@ -61,8 +61,9 @@ export const submitCardGame = async (req: Request, res: Response) => {
     await card_service.setCardGameResult(historyId, result);
     await streak_service.touchStreak(userId);
 
-    const solved = correctIndex.length + wrongIndex.length;
-    const accuracy = solved > 0 ? correctIndex.length / solved : 0;
+    // 분모는 제출된 문항 수가 아니라 출제된 문항 수다.
+    // 제출 수로 나누면 15문제 중 1문제만 맞다고 보내도 정답률이 100%가 된다.
+    const accuracy = questions.length > 0 ? correctIndex.length / questions.length : 0;
     const levelUp = await level_service.addExp(userId, calcGameExp("CARD", accuracy));
 
     res.status(200).json({

@@ -1,10 +1,28 @@
 import type { Request, Response } from "express";
 import * as league_service from "../services/league.service.js";
-import { UNAUTHORIZED } from "../lib/error.js";
+import { HttpError, UNAUTHORIZED } from "../lib/error.js";
 
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
+
+
+/**
+ * 내 순위 조회
+ */
+export const getMyRank = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+
+    const [me, totalUsers] = await Promise.all([
+        league_service.getMyRank(userId),
+        league_service.countRankedCharacters(),
+    ]);
+
+    if (!me) throw new HttpError(404, "NOT_FOUND", "캐릭터를 찾을 수 없습니다.");
+
+    res.status(200).json({ totalUsers, ...me });
+}
 
 
 /**

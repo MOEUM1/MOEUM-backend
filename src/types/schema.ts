@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 
+
+
 export const signupSchema = z.object({
     nickname: z.string().min(1, "닉네임은 필수 입력값입니다"),
     email: z.string().email("이메일 형식이 올바르지 않습니다"),
     password: z.string().min(8, "비밀번호는 최소 8자 이상이어야 합니다"),
     category: z.string().min(1, "카테고리는 필수 입력값입니다"),
+    choosed: z.string()
 })
 
 export type SignupInput = z.infer<typeof signupSchema>
@@ -74,7 +77,10 @@ export type QuizGameResultType = z.infer<typeof QuizGameResultSchema>
 
 // ---------- req용 ----------
 
-export const CardGameResultReqSchema = CardGameResultSchema.omit({ questions: true })
+// JSON 요청에는 Date 타입이 없어 문자열로 들어오므로 coerce로 받는다.
+export const CardGameResultReqSchema = CardGameResultSchema.omit({ questions: true }).extend({
+    endTime: z.coerce.date(),
+})
 
 export const QuizGameResultReqSchema = z.object({
     historyId: z.string(),
@@ -82,9 +88,14 @@ export const QuizGameResultReqSchema = z.object({
         index:z.number(),
         answer:z.string(),
     })),
-    endAt: z.date(), 
+    endAt: z.coerce.date(),
+})
+
+export const ChatAnswerReqSchema = z.object({
+    answer: z.string().min(1, "답변은 필수 입력값입니다"),
 })
 
 export type CardGameResultReqType = z.infer<typeof CardGameResultReqSchema>
 export type QuizGameResultReqType = z.infer<typeof QuizGameResultReqSchema>
+export type ChatAnswerReqType = z.infer<typeof ChatAnswerReqSchema>
 

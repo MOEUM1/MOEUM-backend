@@ -61,9 +61,8 @@ model UserStreak {
 
 model Character {
   id          String @id @default(cuid())
-  name        String @default("") // todo: 캐릭터 이름 설정 기능 추가
+  name        String @default("")
   description String @default("")
-  imageUrl    String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

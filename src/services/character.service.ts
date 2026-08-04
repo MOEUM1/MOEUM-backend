@@ -14,12 +14,11 @@ export const getCharacterLevelByCharacterId = async (characterId: string) => {
     })
 }
 
-export const createCharacter = async (userId: string, imageUrl: string) => {
+export const createCharacter = async (userId: string, name: string) => {
     return await prisma.character.create({
         data: {
             userId,
-            imageUrl,
-            name: "",   //todo: 나중에 캐릭터 이름 설정 기능 추가
+            name,
             description: "",
             characterLevel: {
                 create: {

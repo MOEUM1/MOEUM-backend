@@ -57,6 +57,10 @@ export const CardGameQuestionSchema = z.array(z.object({
     explaination: z.string(),
 }))
 
+export const CardGameQuestionsResponseSchema = z.object({
+    questions: CardGameQuestionSchema,
+})
+
 
 export const CardGameResultSchema = z.object({
     endTime: z.date(),
@@ -74,6 +78,10 @@ export const QuizGameQuestionSchema = z.array(z.object({
     index: z.number(),
     question: z.string(),
 }))
+
+export const QuizGameQuestionsResponseSchema = z.object({
+    questions: QuizGameQuestionSchema,
+})
 
 export const QuizGameResultSchema = z.object({
     endTime: z.date(),
@@ -115,4 +123,3 @@ export const ChatAnswerReqSchema = z.object({
 export type CardGameResultReqType = z.infer<typeof CardGameResultReqSchema>
 export type QuizGameResultReqType = z.infer<typeof QuizGameResultReqSchema>
 export type ChatAnswerReqType = z.infer<typeof ChatAnswerReqSchema>
-

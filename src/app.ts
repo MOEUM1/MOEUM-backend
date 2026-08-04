@@ -5,6 +5,10 @@ import { ErrorHandler } from "./middlewares/error.middleware.js";
 import { configurePassport } from "./passport/jwt.strategy.js";
 import passport from "passport";
 import authRouter from "./routes/auth.route.js";
+import characterRouter from "./routes/character.route.js";
+import gameRouter from "./routes/games/index.route.js";
+import historyRouter from "./routes/history.route.js";
+import leagueRouter from "./routes/league.route.js";
 
 
 const app = express();
@@ -19,6 +23,10 @@ app.use("/api/health", (_req:Request, res:Response) => {
 })
 
 app.use("/api/auth", authRouter);
+app.use("/api/characters", characterRouter);
+app.use("/api/games", gameRouter);
+app.use("/api/histories", historyRouter);
+app.use("/api/leagues", leagueRouter);
 
 
 //여기서부턴 에러 핸들러

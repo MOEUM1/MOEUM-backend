@@ -31,4 +31,11 @@ export class INVALID_CREDENTIALS extends HttpError {
 }
 
 
+export class NOT_FOUND_HISTORY extends HttpError {
+  constructor(message?: string) {
+    super(404, "NOT_FOUND_HISTORY", message);
+  }
+}
+
+
 

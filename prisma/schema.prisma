@@ -13,11 +13,112 @@ datasource db {
 }
 
 
+
 model User {
+  id              String  @id @default(cuid())
+  email           String  @unique
+  passwordHash    String
+  nickname        String  @unique
+  learningPrompt  String? // ⭐️ 가입 시 "자세한 프롬프트"
+  currentLeagueId String? // ⭐️ 현재 티어 (todo: League 모델 추가 후 relation으로 전환)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category    String[]
+
+
+
+
+  character    Character?
+  studyHistory StudyHistory[]
+  streaks UserStreak?
+
+  userContexts UserContext?
+}
+
+model UserContext {
   id        String   @id @default(cuid())
-  nickname      String
-  email     String   @unique
-  passwordHashed  String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context   String  @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+model UserStreak {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  count     Int      @default(0)
+  lastDate  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model Character {
+  id          String @id @default(cuid())
+  name        String @default("") // todo: 캐릭터 이름 설정 기능 추가
+  description String @default("")
+  imageUrl    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  characterLevel CharacterLevel?
+}
+
+model CharacterLevel {
+  id       String @id @default(cuid())
+  level    Int    @default(1)
+  exp      Int    @default(0)
+  totalExp Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  characterId String    @unique
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+
+//게임 관련
+
+enum GameType {
+  CARD
+  QUIZ
+  CHAT
+}
+
+
+model StudyHistory {
+  id        String    @id @default(cuid())
+  type      GameType
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  question  Json?    // 게임에서 사용된 질문/문제
+  result    Json?      // 게임 결과 데이터 (예: 카드 학습 결과, 퀴즈 점수 등)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  aiconversations AIConversation?
+}
+
+model AIConversation {
+  id        String    @id @default(cuid())
+  StudyHistoryId String @unique
+  studyHistory StudyHistory @relation(fields: [StudyHistoryId], references: [id], onDelete: Cascade)
+  conversationId String?
+  messages  Json?
+}
+
+

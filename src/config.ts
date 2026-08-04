@@ -7,4 +7,5 @@ export const env = z.object({
     JWT_SECRET: z.string().min(1),
     JWT_EXPIRES_IN: z.string().min(1),
     OPENAI_API_KEY: z.string().min(1),
+    OPENAI_MODEL: z.string().min(1).default("gpt-5.6-luna"),
 }).parse(process.env)

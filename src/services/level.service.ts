@@ -51,12 +51,7 @@ export const updateCharacterTotalExp = async (userId: string, totalExp: number) 
 }
 
 
-/**
- * 경험치를 더하고 레벨을 다시 계산한다.
- *
- * 조회 -> 계산 -> 저장이 트랜잭션 안에서 일어나야 동시에 두 게임이 끝났을 때
- * 한쪽 경험치가 덮어써져 사라지지 않는다.
- */
+/** 경험치를 더하고 레벨을 재계산한다. */
 export const addExp = async (userId: string, amount: number) => {
     return await prisma.$transaction(async (tx) => {
         const character = await tx.character.findUnique({

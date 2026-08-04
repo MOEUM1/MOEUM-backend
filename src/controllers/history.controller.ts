@@ -1,46 +1,66 @@
 import type { Request, Response } from "express";
 import * as game_service from "../services/games/index.service.js";
-import { HttpError, NOT_FOUND_HISTORY, UNAUTHORIZED } from "../lib/error.js";
-import type { GameType } from "../generated/prisma/enums.js";
 import { toKstDayIndex } from "../services/streak.service.js";
+import { NOT_FOUND_HISTORY, UNAUTHORIZED } from "../lib/error.js";
+import type {
+    HistoryIdParamType,
+    HistoryListQueryType,
+    HistoryPeriodQueryType,
+    HistoryRangeQueryType,
+} from "../types/schema.js";
 
 
-const DEFAULT_TAKE = 20;
-const MAX_TAKE = 100;
-const GAME_TYPES = ["CARD", "QUIZ", "CHAT"] as const;
-
-// 최근 N일 롤링 윈도우. "최근 한달"은 30일로 본다.
 const PERIOD_DAYS = { day: 1, week: 7, month: 30 } as const;
-type Period = keyof typeof PERIOD_DAYS;
 
-const parsePeriod = (raw: unknown): Period =>
-    typeof raw === "string" && raw in PERIOD_DAYS ? (raw as Period) : "day";
-
-const periodRange = (period: Period) => {
+const periodRange = (period: keyof typeof PERIOD_DAYS) => {
     const to = new Date();
     const from = new Date(to.getTime() - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000);
     return { from, to };
 };
 
-const parseTake = (raw: unknown) => {
-    const n = typeof raw === "string" ? Number(raw) : Number.NaN;
-    return Number.isInteger(n) && n > 0 ? Math.min(n, MAX_TAKE) : DEFAULT_TAKE;
+const countStudyDays = (dates: { createdAt: Date }[]) =>
+    new Set(dates.map((d) => toKstDayIndex(d.createdAt))).size;
+
+const toByType = (grouped: { type: string; _count: { _all: number } }[]) => {
+    const byType: Record<string, number> = { CARD: 0, QUIZ: 0, CHAT: 0 };
+    for (const row of grouped) byType[row.type] = row._count._all;
+    return byType;
 };
 
-const parseSkip = (raw: unknown) => {
-    const n = typeof raw === "string" ? Number(raw) : Number.NaN;
-    return Number.isInteger(n) && n > 0 ? n : 0;
-};
+const toSummary = (history: { id: string; type: string; createdAt: Date; updatedAt: Date }) => ({
+    id: history.id,
+    type: history.type,
+    createdAt: history.createdAt.toISOString(),
+    updatedAt: history.updatedAt.toISOString(),
+});
+
+const toDetail = (history: { id: string; type: string; question: unknown; result: unknown; createdAt: Date; updatedAt: Date }) => ({
+    ...toSummary(history),
+    question: history.question,
+    result: history.result,
+});
 
 
-/**
- * 기간별 학습량 요약 (양만) - GET /api/histories/summary?period=day|week|month
- */
+export const getHistories = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw new UNAUTHORIZED();
+
+    const { type, take, skip } = res.locals["query"] as HistoryListQueryType;
+
+    const [histories, total] = await Promise.all([
+        game_service.getGameHistoriesByUserId(userId, { type, take, skip }),
+        game_service.countGameHistoriesByUserId(userId, type),
+    ]);
+
+    res.status(200).json({ total, take, skip, histories: histories.map(toSummary) });
+}
+
+
 export const getPeriodSummary = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
-    const period = parsePeriod(req.query["period"]);
+    const { period } = res.locals["query"] as HistoryPeriodQueryType;
     const { from, to } = periodRange(period);
 
     const [grouped, dates] = await Promise.all([
@@ -48,34 +68,24 @@ export const getPeriodSummary = async (req: Request, res: Response) => {
         game_service.getStudyDatesInPeriod(userId, from),
     ]);
 
-    const byType: Record<string, number> = { CARD: 0, QUIZ: 0, CHAT: 0 };
-    for (const row of grouped) byType[row.type] = row._count._all;
-
-    const studyDays = new Set(dates.map((d) => toKstDayIndex(d.createdAt))).size;
-
     res.status(200).json({
         period,
         days: PERIOD_DAYS[period],
         from: from.toISOString(),
         to: to.toISOString(),
         total: dates.length,
-        byType,
-        studyDays,
+        byType: toByType(grouped),
+        studyDays: countStudyDays(dates),
     });
 }
 
 
-/**
- * 기간별 학습 내역 (디테일) - GET /api/histories/detail?period=day|week|month
- */
 export const getPeriodDetail = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
-    const period = parsePeriod(req.query["period"]);
+    const { period, take, skip } = res.locals["query"] as HistoryPeriodQueryType;
     const { from, to } = periodRange(period);
-    const take = parseTake(req.query["take"]);
-    const skip = parseSkip(req.query["skip"]);
 
     const [histories, dates] = await Promise.all([
         game_service.getGameHistoriesInPeriod(userId, from, { take, skip }),
@@ -90,73 +100,47 @@ export const getPeriodDetail = async (req: Request, res: Response) => {
         total: dates.length,
         take,
         skip,
-        histories: histories.map((history) => ({
-            id: history.id,
-            type: history.type,
-            question: history.question,
-            result: history.result,
-            createdAt: history.createdAt.toISOString(),
-            updatedAt: history.updatedAt.toISOString(),
-        })),
+        histories: histories.map(toDetail),
     });
 }
 
 
-/**
- * 내 학습 기록 목록 - type으로 게임 종류를 걸러낼 수 있다.
- */
-export const getHistories = async (req: Request, res: Response) => {
+/** GET /api/histories/range?from=&to=&type=&take=&skip= */
+export const getRangeHistories = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
-    const rawType = req.query["type"];
-    const type = typeof rawType === "string" && (GAME_TYPES as readonly string[]).includes(rawType)
-        ? (rawType as GameType)
-        : undefined;
+    const { from, to, type, take, skip } = res.locals["query"] as HistoryRangeQueryType;
 
-    const take = parseTake(req.query["take"]);
-    const skip = parseSkip(req.query["skip"]);
-
-    const [histories, total] = await Promise.all([
-        game_service.getGameHistoriesByUserId(userId, { type, take, skip }),
-        game_service.countGameHistoriesByUserId(userId, type),
+    const [histories, total, grouped, dates] = await Promise.all([
+        game_service.getGameHistoriesInRange(userId, from, to, { type, take, skip }),
+        game_service.countGameHistoriesInRange(userId, from, to, type),
+        game_service.countGameHistoriesInRangeByType(userId, from, to),
+        game_service.getStudyDatesInRange(userId, from, to, type),
     ]);
 
     res.status(200).json({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        type: type ?? null,
         total,
         take,
         skip,
-        histories: histories.map((history) => ({
-            id: history.id,
-            type: history.type,
-            createdAt: history.createdAt.toISOString(),
-            updatedAt: history.updatedAt.toISOString(),
-        })),
+        byType: toByType(grouped),
+        studyDays: countStudyDays(dates),
+        histories: histories.map(toDetail),
     });
 }
 
 
-/**
- * 학습 기록 단건 조회 - 본인 기록만 조회할 수 있다.
- */
 export const getHistory = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
-    const historyId = req.params["historyId"];
-    if (typeof historyId !== "string") throw new HttpError(400, "VALIDATION_ERROR", "historyId가 필요합니다.");
+    const { historyId } = res.locals["params"] as HistoryIdParamType;
 
     const history = await game_service.getGameHistoryById(historyId);
-    if (!history || history.userId !== userId) throw new NOT_FOUND_HISTORY("학습 기록을 찾을 수 없습니다.");
+    if (!history || history.userId !== userId) throw new NOT_FOUND_HISTORY();
 
-    res.status(200).json({
-        history: {
-            id: history.id,
-            type: history.type,
-            question: history.question,
-            result: history.result,
-            createdAt: history.createdAt.toISOString(),
-            updatedAt: history.updatedAt.toISOString(),
-        }
-    });
+    res.status(200).json({ history: toDetail(history) });
 }

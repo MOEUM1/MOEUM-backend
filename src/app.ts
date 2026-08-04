@@ -9,6 +9,8 @@ import characterRouter from "./routes/character.route.js";
 import gameRouter from "./routes/games/index.route.js";
 import historyRouter from "./routes/history.route.js";
 import leagueRouter from "./routes/league.route.js";
+import userRouter from "./routes/user.route.js";
+import analyzeRouter from "./routes/analyze.route.js";
 
 
 const app = express();
@@ -23,6 +25,8 @@ app.use("/api/health", (_req:Request, res:Response) => {
 })
 
 app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
+app.use("/api/analyses", analyzeRouter);
 app.use("/api/characters", characterRouter);
 app.use("/api/games", gameRouter);
 app.use("/api/histories", historyRouter);

@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-moeum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD를 .env에 설정하세요}
+      POSTGRES_DB: ${POSTGRES_DB:-moeum}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moeum} -d ${POSTGRES_DB:-moeum}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # 외부에 DB를 열지 않는다. app 컨테이너만 내부 네트워크로 접근한다.
+
+  # 앱 기동 전 마이그레이션만 적용하고 종료된다.
+  # prisma CLI가 devDependency라 운영 이미지 대신 builder 스테이지를 쓴다.
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: pnpm exec prisma migrate deploy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET을 .env에 설정하세요}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY를 .env에 설정하세요}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+    ports:
+      - "${APP_PORT:-80}:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

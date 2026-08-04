@@ -28,6 +28,23 @@ export const deleteAccountSchema = z.object({
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>
 
 
+export const updateUserSchema = z.object({
+    nickname: z.string().min(1, "닉네임은 필수 입력값입니다").optional(),
+    category: z.array(z.string().min(1)).min(1, "카테고리는 최소 하나 이상이어야 합니다").optional(),
+    learningPrompt: z.string().optional(),
+}).refine((v) => Object.keys(v).length > 0, { message: "수정할 항목이 최소 하나는 필요합니다" })
+
+export type UpdateUserInput = z.infer<typeof updateUserSchema>
+
+
+export const updateCharacterSchema = z.object({
+    name: z.string().min(1, "캐릭터 이름은 비울 수 없습니다").optional(),
+    description: z.string().optional(),
+}).refine((v) => Object.keys(v).length > 0, { message: "수정할 항목이 최소 하나는 필요합니다" })
+
+export type UpdateCharacterInput = z.infer<typeof updateCharacterSchema>
+
+
 // 카드게임 관련 스키마
 
 

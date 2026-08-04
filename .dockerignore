@@ -1,0 +1,25 @@
+node_modules
+dist
+
+# prisma generate로 빌드 중에 다시 만든다
+src/generated
+
+.git
+.gitignore
+
+# 절대 이미지에 들어가면 안 되는 것
+.env
+.env.*
+*.pem
+*.key
+
+*.log
+.DS_Store
+.claude
+.vscode
+.idea
+README.md
+DEPLOY.md
+Dockerfile
+.dockerignore
+docker-compose.yml

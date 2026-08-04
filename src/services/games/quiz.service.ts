@@ -3,7 +3,7 @@ import { env } from "../../config.js";
 import { NOT_FOUND_HISTORY } from "../../lib/error.js";
 import { client } from "../../lib/openai.js";
 import { prisma } from "../../lib/prisma.js";
-import { CardGameQuestionSchema, QuizGameResultSchema, type QuizGameQuestionType, type QuizGameResultReqType, type QuizGameResultType } from "../../types/schema.js";
+import { QuizGameQuestionsResponseSchema, QuizGameResultSchema, type QuizGameQuestionType, type QuizGameResultReqType, type QuizGameResultType } from "../../types/schema.js";
 import { getGameHistoryById } from "./index.service.js";
 
 
@@ -32,10 +32,10 @@ export const generateQuizGameQuestions = async (subject:string) => {
         input: prompt,
         conversation: conv.id,
         text: {
-            format: zodTextFormat(CardGameQuestionSchema, "quiz_question")
+            format: zodTextFormat(QuizGameQuestionsResponseSchema, "quiz_questions")
         }
     })
-    return {response: response.output_parsed as QuizGameQuestionType, conversationId: conv.id}
+    return {response: response.output_parsed?.questions as QuizGameQuestionType, conversationId: conv.id}
 }
 
 

@@ -1,14 +1,12 @@
 import type { Request, Response } from "express";
 import * as analyze_service from "../services/analyze.service.js";
-import { HttpError, UNAUTHORIZED } from "../lib/error.js";
+import { trimContext, withUserContext, MAX_CONTEXT_CHARS } from "../lib/prompt.js";
+import { NO_HISTORY, UNAUTHORIZED } from "../lib/error.js";
 
 
-/**
- * 저장된 최신 AI 피드백 조회 - 게임 종료 시 백그라운드로 갱신된다.
- */
 export const getMyAnalysis = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const userContext = await analyze_service.getUserContext(userId);
 
@@ -19,27 +17,20 @@ export const getMyAnalysis = async (req: Request, res: Response) => {
 }
 
 
-/**
- * AI 피드백 즉시 재생성 - 게임 종료를 기다리지 않고 직접 요청할 때 사용한다.
- * OpenAI 호출이 끝날 때까지 응답이 지연된다.
- */
 export const requestAnalysis = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const analysis = await analyze_service.analyzeRecentGames(userId);
-    if (analysis === null) throw new HttpError(400, "NO_HISTORY", "분석할 학습 기록이 없습니다.");
+    if (analysis === null) throw new NO_HISTORY();
 
     res.status(200).json({ analysis });
 }
 
 
-/**
- * 분석 대상이 되는 최근 게임 목록
- */
 export const getAnalysisSource = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const histories = await analyze_service.getRecentGameHistories(userId);
 
@@ -50,5 +41,30 @@ export const getAnalysisSource = async (req: Request, res: Response) => {
             type: history.type,
             createdAt: history.createdAt.toISOString(),
         })),
+    });
+}
+
+
+/**
+ * 디버그용. 저장된 context 원문과, 게임 문제 생성 시 실제로 프롬프트에 실리는 형태를 함께 보여준다.
+ * 클라이언트에서 쓰는 엔드포인트가 아니다.
+ */
+export const getMyContext = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw new UNAUTHORIZED();
+
+    const userContext = await analyze_service.getUserContext(userId);
+    const raw = userContext?.context ?? "";
+    const trimmed = trimContext(raw);
+
+    res.status(200).json({
+        exists: Boolean(userContext),
+        rawLength: raw.length,
+        trimmedLength: trimmed.length,
+        maxChars: MAX_CONTEXT_CHARS,
+        truncated: raw.trim().length > MAX_CONTEXT_CHARS,
+        updatedAt: userContext?.updatedAt.toISOString() ?? null,
+        raw,
+        promptPreview: withUserContext(raw, "<여기에 실제 문제 생성 프롬프트가 들어감>"),
     });
 }

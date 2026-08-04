@@ -1,16 +1,16 @@
 import type { Request, Response } from "express";
 import * as level_service from "../services/level.service.js";
 import * as char_service from "../services/character.service.js";
-import { HttpError, UNAUTHORIZED } from "../lib/error.js";
+import { NOT_FOUND_CHARACTER, UNAUTHORIZED } from "../lib/error.js";
 import type { UpdateCharacterInput } from "../types/schema.js";
 
 
 export const getMyCharacter = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const character = await level_service.getCharacterLevel(userId);
-    if (!character || !character.characterLevel) throw new HttpError(404, "NOT_FOUND", "캐릭터를 찾을 수 없습니다.");
+    if (!character || !character.characterLevel) throw new NOT_FOUND_CHARACTER();
 
     const expToNextLevel = await level_service.getNeededExpForNextLevel(userId);
 
@@ -31,12 +31,12 @@ export const getMyCharacter = async (req: Request, res: Response) => {
 
 export const updateMyCharacter = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const { name, description } = req.body as UpdateCharacterInput;
 
     const existing = await char_service.getCharacterByUserId(userId);
-    if (!existing) throw new HttpError(404, "NOT_FOUND", "캐릭터를 찾을 수 없습니다.");
+    if (!existing) throw new NOT_FOUND_CHARACTER();
 
     const character = await char_service.updateCharacter(userId, { name, description });
 
@@ -55,10 +55,10 @@ export const updateMyCharacter = async (req: Request, res: Response) => {
 
 export const getMyLevel = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const character = await level_service.getCharacterLevel(userId);
-    if (!character || !character.characterLevel) throw new HttpError(404, "NOT_FOUND", "캐릭터를 찾을 수 없습니다.");
+    if (!character || !character.characterLevel) throw new NOT_FOUND_CHARACTER();
 
     const expToNextLevel = await level_service.getNeededExpForNextLevel(userId);
 

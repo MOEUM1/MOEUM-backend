@@ -6,24 +6,20 @@ import * as analyze_service from "../../services/analyze.service.js";
 import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
 import { calcGameExp } from "../../lib/exp.js";
-import { HttpError, NOT_FOUND_HISTORY, UNAUTHORIZED } from "../../lib/error.js";
+import { NO_CATEGORY, NOT_FOUND_HISTORY, NOT_FOUND_USER, UNAUTHORIZED, VALIDATION_ERROR } from "../../lib/error.js";
 import type { QuizGameQuestionType, QuizGameResultReqType } from "../../types/schema.js";
 
 
-/**
- * 퀴즈게임 시작 - 서술형 문제를 AI로 생성하고 대화(conversation)와 함께 저장한다.
- */
 export const startQuizGame = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const user = await auth_service.findUserById(userId);
-    if (!user) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!user) throw new NOT_FOUND_USER();
 
     const subject = user.category[0];
-    if (!subject) throw new HttpError(400, "NO_CATEGORY", "학습 분야가 설정되어 있지 않습니다.");
+    if (!subject) throw new NO_CATEGORY();
 
-    // 지금까지의 학습 분석을 먼저 알려주고 문제를 받는다.
     const context = await analyze_service.getUserContextText(userId);
 
     const history = await quiz_service.createQuizGameHistory(userId);
@@ -39,26 +35,24 @@ export const startQuizGame = async (req: Request, res: Response) => {
 }
 
 
-/**
- * 퀴즈게임 답안 제출 - AI로 채점한 뒤 결과를 저장한다.
- */
 export const submitQuizGame = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    if (!userId) throw new UNAUTHORIZED("알 수 없는 사용자입니다.");
+    if (!userId) throw new UNAUTHORIZED();
 
     const body = req.body as QuizGameResultReqType;
 
     const history = await game_service.getGameHistoryById(body.historyId);
-    if (!history || history.userId !== userId) throw new NOT_FOUND_HISTORY("학습 기록을 찾을 수 없습니다.");
-    if (history.type !== "QUIZ") throw new HttpError(400, "VALIDATION_ERROR", "퀴즈게임 기록이 아닙니다.");
+    if (!history || history.userId !== userId) throw new NOT_FOUND_HISTORY();
+    if (history.type !== "QUIZ") throw new VALIDATION_ERROR("퀴즈게임 기록이 아닙니다");
+
+    const questions = (history.question ?? null) as QuizGameQuestionType | null;
+    if (!questions) throw new VALIDATION_ERROR("문제가 생성되지 않은 기록입니다");
 
     const graded = await quiz_service.gradeQuizGameResult(body);
     await quiz_service.setQuizGameResult(body.historyId, graded);
     await streak_service.touchStreak(userId);
 
-    // 분모는 채점된 문항 수가 아니라 출제된 문항 수다.
-    // 채점 수로 나누면 5문제 중 1문제만 답하고 맞혔을 때 정답률이 100%가 된다.
-    const questions = (history.question ?? []) as QuizGameQuestionType;
+    // 분모는 채점된 문항 수가 아니라 출제 문항 수다.
     const totalCount = questions.length;
     const accuracy = totalCount > 0 ? graded.correctCount / totalCount : 0;
     const levelUp = await level_service.addExp(userId, calcGameExp("QUIZ", accuracy));
@@ -73,6 +67,5 @@ export const submitQuizGame = async (req: Request, res: Response) => {
         levelUp,
     });
 
-    // 응답을 보낸 뒤 최근 게임 기반 분석을 백그라운드로 실행한다.
     analyze_service.runAnalyzeInBackground(userId);
 }

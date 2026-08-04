@@ -1,20 +1,14 @@
-// 프롬프트에 실어 보낼 학습 맥락의 최대 길이.
-// analyzeGames는 "최소 (게임수 x 200)자 이상"으로 총평을 만들기 때문에
-// 그대로 넣으면 매 문제 생성마다 토큰이 계속 불어난다.
+// 분석 총평은 계속 길어지므로 프롬프트에 싣기 전에 자른다.
 export const MAX_CONTEXT_CHARS = 2000;
 
 
 export const trimContext = (context: string): string => {
     const trimmed = context.trim();
-    if (trimmed.length <= MAX_CONTEXT_CHARS) return trimmed;
-    return trimmed.slice(0, MAX_CONTEXT_CHARS) + "...";
+    return trimmed.length <= MAX_CONTEXT_CHARS ? trimmed : trimmed.slice(0, MAX_CONTEXT_CHARS) + "...";
 };
 
 
-/**
- * 문제 생성 프롬프트 앞에 사용자 학습 맥락을 덧붙인다.
- * 맥락이 없으면(첫 게임) 원본 프롬프트를 그대로 돌려준다.
- */
+/** 문제 생성 프롬프트 앞에 학습 맥락을 붙인다. 맥락이 없으면 원본을 그대로 반환한다. */
 export const withUserContext = (context: string, prompt: string): string => {
     const trimmed = trimContext(context);
     if (!trimmed) return prompt;

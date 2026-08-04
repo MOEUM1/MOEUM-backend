@@ -30,7 +30,6 @@ export const analyzeGames = async (studyHistorys: StudyHistory[], minLength:numb
 }
 
 
-// 게임 종료 후 분석에 사용할 최근 게임 수
 export const RECENT_GAME_COUNT = 5;
 
 
@@ -50,15 +49,12 @@ export const getUserContext = async (userId:string) => {
 }
 
 
-/** 문제 생성 프롬프트에 넣을 학습 맥락. 아직 분석된 게 없으면 빈 문자열. */
 export const getUserContextText = async (userId:string) => {
     const userContext = await getUserContext(userId);
     return userContext?.context.trim() ?? "";
 }
 
 
-// UserContext.context 는 String 컬럼이므로 문자열을 받는다.
-// 백그라운드에서 돌기 때문에 행이 없으면 조용히 실패하지 않도록 upsert 한다.
 export const updateUserContext = async (userId:string, context:string) => {
     return await prisma.userContext.upsert({
         where: { userId },
@@ -68,10 +64,6 @@ export const updateUserContext = async (userId:string, context:string) => {
 }
 
 
-/**
- * 최근 N게임을 바탕으로 총평을 만들어 UserContext에 저장한다.
- * 기록이 없으면 아무것도 하지 않는다.
- */
 export const analyzeRecentGames = async (userId:string, take:number = RECENT_GAME_COUNT) => {
     const histories = await getRecentGameHistories(userId, take);
     if (histories.length === 0) return null;
@@ -82,12 +74,7 @@ export const analyzeRecentGames = async (userId:string, take:number = RECENT_GAM
 }
 
 
-/**
- * 게임 종료 시 호출. 응답을 막지 않도록 await 하지 않고 백그라운드로 돌린다.
- *
- * catch를 반드시 걸어야 한다. 여기서 reject가 새어나가면 Node가
- * unhandledRejection으로 프로세스를 종료시킨다.
- */
+/** catch 필수. reject가 새면 unhandledRejection으로 프로세스가 죽는다. */
 export const runAnalyzeInBackground = (userId:string) => {
     void analyzeRecentGames(userId).catch((err) => {
         console.error(`[analyze] 백그라운드 분석 실패 userId=${userId}`, err);

@@ -96,9 +96,7 @@ export const QuizGameResultSchema = z.object({
     }))
 })
 
-// AI 채점 출력용. endTime을 뺀 이유 두 가지:
-//  1) z.date()는 JSON Schema로 표현할 수 없어 zodTextFormat이 예외를 던진다
-//  2) 종료 시각은 요청의 endAt을 써야 한다. AI가 지어낸 시각을 저장할 이유가 없다
+// AI 채점 출력용. z.date()는 JSON Schema로 표현할 수 없어 endTime을 제외한다.
 export const QuizGameGradeSchema = QuizGameResultSchema.omit({ endTime: true })
 
 export type QuizGameQuestionType = z.infer<typeof QuizGameQuestionSchema>
@@ -108,7 +106,7 @@ export type QuizGameGradeType = z.infer<typeof QuizGameGradeSchema>
 
 // ---------- req용 ----------
 
-// JSON 요청에는 Date 타입이 없어 문자열로 들어오므로 coerce로 받는다.
+// JSON에는 Date 타입이 없어 문자열로 들어온다.
 export const CardGameResultReqSchema = CardGameResultSchema.omit({ questions: true }).extend({
     endTime: z.coerce.date(),
 })
@@ -129,3 +127,65 @@ export const ChatAnswerReqSchema = z.object({
 export type CardGameResultReqType = z.infer<typeof CardGameResultReqSchema>
 export type QuizGameResultReqType = z.infer<typeof QuizGameResultReqSchema>
 export type ChatAnswerReqType = z.infer<typeof ChatAnswerReqSchema>
+
+
+// ---------- query / path 파라미터 ----------
+
+export const GameTypeSchema = z.enum(["CARD", "QUIZ", "CHAT"])
+export const PeriodSchema = z.enum(["day", "week", "month"])
+
+const take = z.coerce.number().int().positive().max(100).default(20)
+const skip = z.coerce.number().int().min(0).default(0)
+
+export const HistoryListQuerySchema = z.object({
+    type: GameTypeSchema.optional(),
+    take,
+    skip,
+})
+
+export const HistoryPeriodQuerySchema = z.object({
+    period: PeriodSchema.default("day"),
+    take,
+    skip,
+})
+
+/** 날짜 구간 조회. from/to는 ISO 문자열 또는 YYYY-MM-DD. */
+export const HistoryRangeQuerySchema = z.object({
+    from: z.coerce.date(),
+    to: z.coerce.date(),
+    type: GameTypeSchema.optional(),
+    take,
+    skip,
+}).refine((v) => v.from <= v.to, {
+    message: "from은 to보다 이후일 수 없습니다",
+    path: ["from"],
+})
+
+export const LeagueTopQuerySchema = z.object({
+    limit: z.coerce.number().int().positive().max(100).default(10),
+})
+
+export const HistoryIdParamSchema = z.object({
+    historyId: z.string().min(1, "historyId가 필요합니다"),
+})
+
+export type HistoryListQueryType = z.infer<typeof HistoryListQuerySchema>
+export type HistoryPeriodQueryType = z.infer<typeof HistoryPeriodQuerySchema>
+export type HistoryRangeQueryType = z.infer<typeof HistoryRangeQuerySchema>
+export type LeagueTopQueryType = z.infer<typeof LeagueTopQuerySchema>
+export type HistoryIdParamType = z.infer<typeof HistoryIdParamSchema>
+
+
+// ---------- 대화형 게임 결과 ----------
+
+export const ChatGameResultSchema = z.object({
+    endTime: z.coerce.date(),
+    turns: z.number(),
+    summary: z.string(),
+    messages: z.array(z.object({
+        role: z.enum(["ai", "user"]),
+        content: z.string(),
+    })),
+})
+
+export type ChatGameResultType = z.infer<typeof ChatGameResultSchema>

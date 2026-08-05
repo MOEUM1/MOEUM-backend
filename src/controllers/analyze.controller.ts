@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import * as analyze_service from "../services/analyze.service.js";
 import { trimContext, withUserContext, MAX_CONTEXT_CHARS } from "../lib/prompt.js";
 import { NO_HISTORY, UNAUTHORIZED } from "../lib/error.js";
+import { redis } from "../lib/redis.js";
 
 
 export const getMyAnalysis = async (req: Request, res: Response) => {
@@ -20,7 +21,6 @@ export const getMyAnalysis = async (req: Request, res: Response) => {
 export const requestAnalysis = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) throw new UNAUTHORIZED();
-
     const analysis = await analyze_service.analyzeRecentGames(userId);
     if (analysis === null) throw new NO_HISTORY();
 

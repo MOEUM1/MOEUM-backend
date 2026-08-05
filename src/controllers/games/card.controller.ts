@@ -5,6 +5,7 @@ import * as game_service from "../../services/games/index.service.js";
 import * as analyze_service from "../../services/analyze.service.js";
 import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
+import { memGetGameHistories, memSaveGameHistory } from "../../services/historyMemory.service.js";
 import { calcGameExp } from "../../lib/exp.js";
 import { NO_CATEGORY, NOT_FOUND_HISTORY, NOT_FOUND_USER, UNAUTHORIZED, VALIDATION_ERROR } from "../../lib/error.js";
 import type { CardGameQuestionType, CardGameResultReqType, CardGameResultType, HistoryIdParamType } from "../../types/schema.js";
@@ -22,9 +23,10 @@ export const startCardGame = async (req: Request, res: Response) => {
     if (!subject) throw new NO_CATEGORY();
 
     const context = await analyze_service.getUserContextText(userId);
+    const recent = await memGetGameHistories(userId, 4);
 
     const history = await game_service.createGameHistory(userId, "CARD");
-    const questions = await card_service.generateCardGameQuestions(subject, context);
+    const questions = await card_service.generateCardGameQuestions(subject, context, recent);
     await card_service.setCardGameQuestions(history.id, questions);
 
     res.status(201).json({
@@ -56,6 +58,9 @@ export const submitCardGame = async (req: Request, res: Response) => {
     await streak_service.touchStreak(userId);
 
     // 분모는 제출 문항 수가 아니라 출제 문항 수다.
+    const wrongQuestions = questions.filter((q) => wrongIndex.includes(q.index)).map((q) => q.question);
+    await memSaveGameHistory(userId, "CARD", JSON.stringify(wrongQuestions), `정답 ${correctIndex.length}/${questions.length}`);
+
     const accuracy = questions.length > 0 ? correctIndex.length / questions.length : 0;
     const levelUp = await level_service.addExp(userId, calcGameExp("CARD", accuracy));
 
@@ -68,5 +73,5 @@ export const submitCardGame = async (req: Request, res: Response) => {
         levelUp,
     });
 
-    analyze_service.runAnalyzeInBackground(userId);
+    if (res.locals["goAnalysis"]) analyze_service.runAnalyzeInBackground(userId);
 }

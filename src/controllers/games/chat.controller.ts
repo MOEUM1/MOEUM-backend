@@ -5,6 +5,7 @@ import * as game_service from "../../services/games/index.service.js";
 import * as analyze_service from "../../services/analyze.service.js";
 import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
+import { memSaveGameHistory } from "../../services/historyMemory.service.js";
 import { calcGameExp } from "../../lib/exp.js";
 import { NO_CATEGORY, NOT_FOUND_HISTORY, NOT_FOUND_USER, UNAUTHORIZED, VALIDATION_ERROR } from "../../lib/error.js";
 import type { ChatAnswerReqType, ChatGameResultType, HistoryIdParamType } from "../../types/schema.js";
@@ -97,6 +98,9 @@ export const endChatGame = async (req: Request, res: Response) => {
     };
     await chat_service.setChatGameResult(historyId, result);
 
+    const firstQuestion = messages.find((m) => m.role === "ai")?.content ?? "";
+    await memSaveGameHistory(userId, "CHAT", firstQuestion, summary.slice(0, 500));
+
     await streak_service.touchStreak(userId);
     const levelUp = await level_service.addExp(userId, calcGameExp("CHAT"));
 
@@ -108,5 +112,5 @@ export const endChatGame = async (req: Request, res: Response) => {
         levelUp,
     });
 
-    analyze_service.runAnalyzeInBackground(userId);
+    if (res.locals["goAnalysis"]) analyze_service.runAnalyzeInBackground(userId);
 }

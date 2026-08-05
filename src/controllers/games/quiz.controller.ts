@@ -5,6 +5,7 @@ import * as game_service from "../../services/games/index.service.js";
 import * as analyze_service from "../../services/analyze.service.js";
 import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
+import { memGetGameHistories, memSaveGameHistory } from "../../services/historyMemory.service.js";
 import { calcGameExp } from "../../lib/exp.js";
 import { NO_CATEGORY, NOT_FOUND_HISTORY, NOT_FOUND_USER, UNAUTHORIZED, VALIDATION_ERROR } from "../../lib/error.js";
 import type { QuizGameQuestionType, QuizGameResultReqType } from "../../types/schema.js";
@@ -21,9 +22,10 @@ export const startQuizGame = async (req: Request, res: Response) => {
     if (!subject) throw new NO_CATEGORY();
 
     const context = await analyze_service.getUserContextText(userId);
+    const recent = await memGetGameHistories(userId, 4);
 
     const history = await quiz_service.createQuizGameHistory(userId);
-    const { response: questions, conversationId } = await quiz_service.generateQuizGameQuestions(subject, context);
+    const { response: questions, conversationId } = await quiz_service.generateQuizGameQuestions(subject, context, recent);
     await game_service.setQuestionWithConversation(history.id, conversationId, questions);
 
     res.status(201).json({
@@ -53,6 +55,12 @@ export const submitQuizGame = async (req: Request, res: Response) => {
     await streak_service.touchStreak(userId);
 
     // 분모는 채점된 문항 수가 아니라 출제 문항 수다.
+    const wrongQuestions = graded.grade
+        .filter((g) => !g.isCorrect)
+        .map((g) => questions.find((q) => q.index === g.index)?.question)
+        .filter((q): q is string => Boolean(q));
+    await memSaveGameHistory(userId, "QUIZ", JSON.stringify(wrongQuestions), `정답 ${graded.correctCount}/${questions.length}`);
+
     const totalCount = questions.length;
     const accuracy = totalCount > 0 ? graded.correctCount / totalCount : 0;
     const levelUp = await level_service.addExp(userId, calcGameExp("QUIZ", accuracy));
@@ -67,5 +75,5 @@ export const submitQuizGame = async (req: Request, res: Response) => {
         levelUp,
     });
 
-    analyze_service.runAnalyzeInBackground(userId);
+    if (res.locals["goAnalysis"]) analyze_service.runAnalyzeInBackground(userId);
 }

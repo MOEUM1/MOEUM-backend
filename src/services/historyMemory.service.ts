@@ -3,6 +3,10 @@ import { redis } from "../lib/redis.js";
 import { gameTypeToKor } from "./analyze.service.js";
 
 
+/** 복습 문제 생성 시 참고할 최근 기록 수 */
+export const REVIEW_HISTORY_TAKE = 2;
+
+
 export interface memHisType {
     type: GameType;
     question: string;

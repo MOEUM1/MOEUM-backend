@@ -5,7 +5,7 @@ import { client } from "../lib/openai.js";
 import { prisma } from "../lib/prisma.js";
 
 
-const gameTypeToKor = {
+export const gameTypeToKor = {
     "CARD": "카드게임",
     "QUIZ": "퀴즈게임",
     "CHAT": "대화형 게임"

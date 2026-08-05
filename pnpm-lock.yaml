@@ -38,6 +38,9 @@ importers:
       passport-jwt:
         specifier: ^4.0.1
         version: 4.0.1
+      redis:
+        specifier: ^6.2.0
+        version: 6.2.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -376,6 +379,42 @@ packages:
       '@types/react':
         optional: true
 
+  '@redis/bloom@6.2.0':
+    resolution: {integrity: sha512-ggQvzpeCKnybwUrEiMVVtE1Np4vWnRfpeAaIP2MdZiVw7PHOhJrF4cONVuLRn1TkMi6ehp2OPjTOMK+8XmiQSQ==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.2.0
+
+  '@redis/client@6.2.0':
+    resolution: {integrity: sha512-HHszna68MTBRiDZV3Wo2wANH7Z5v/nuh+ZyCAGBce0PS8tDcg1/yzZ1vqbKbUyTdz1wB54kqZxXrnPwpR8Ivdw==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@node-rs/xxhash': ^1.1.0
+      '@opentelemetry/api': '>=1 <2'
+    peerDependenciesMeta:
+      '@node-rs/xxhash':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+
+  '@redis/json@6.2.0':
+    resolution: {integrity: sha512-oweO7PfHWYXkgVT88K+Fm3Wx98lKYKAEXaH162gVbw1kmBOBVQHxw0Yjh1p6BYBUIQMHqLyWwYe99eK7/hD1VQ==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.2.0
+
+  '@redis/search@6.2.0':
+    resolution: {integrity: sha512-chLEQfalFW3+uCPE99XoIOZhcQ3eF7S3fGxgiiaPf6MMrOZHEiTvgMnXR4xXZX0yDecyoWjGYlQQKTYag/ZExg==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.2.0
+
+  '@redis/time-series@6.2.0':
+    resolution: {integrity: sha512-/H/eE/lnhZLZYpHGpI+ZN7TePb7isEaub8b07oQcTDQptPslVKdUFwNhUm+hQHks781oh+F1Leiip1WHh4HfWw==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.2.0
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -675,6 +714,10 @@ packages:
 
   classnames@2.5.1:
     resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
+
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
 
   confbox@0.2.4:
     resolution: {integrity: sha512-ysOGlgTFbN2/Y6Cg3Iye8YKulHw+R2fNXHrgSmXISQdMnomY6eNDprVdW9R5xBguEqI954+S6709UyiO7B+6OQ==}
@@ -1223,6 +1266,10 @@ packages:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
     engines: {node: '>= 20.19.0'}
 
+  redis@6.2.0:
+    resolution: {integrity: sha512-BShYVyT0Gx67CE80xry5XroSSv6Vxr60yKs0HRiBbUc7kHm+bY7gvSDBBgTjuiV/reWKeZWLyA1ebC5z359wRQ==}
+    engines: {node: '>= 20.0.0'}
+
   remeda@2.33.4:
     resolution: {integrity: sha512-ygHswjlc/opg2VrtiYvUOPLjxjtdKvjGz1/plDhkG66hjNjFr1xmfrs2ClNFo/E6TyUFiwYNh53bKV26oBoMGQ==}
 
@@ -1632,6 +1679,26 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.18
 
+  '@redis/bloom@6.2.0(@redis/client@6.2.0)':
+    dependencies:
+      '@redis/client': 6.2.0
+
+  '@redis/client@6.2.0':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@6.2.0(@redis/client@6.2.0)':
+    dependencies:
+      '@redis/client': 6.2.0
+
+  '@redis/search@6.2.0(@redis/client@6.2.0)':
+    dependencies:
+      '@redis/client': 6.2.0
+
+  '@redis/time-series@6.2.0(@redis/client@6.2.0)':
+    dependencies:
+      '@redis/client': 6.2.0
+
   '@standard-schema/spec@1.1.0': {}
 
   '@types/body-parser@1.19.6':
@@ -1943,6 +2010,8 @@ snapshots:
       readdirp: 5.0.0
 
   classnames@2.5.1: {}
+
+  cluster-key-slot@1.1.2: {}
 
   confbox@0.2.4: {}
 
@@ -2475,6 +2544,17 @@ snapshots:
   react@19.2.8: {}
 
   readdirp@5.0.0: {}
+
+  redis@6.2.0:
+    dependencies:
+      '@redis/bloom': 6.2.0(@redis/client@6.2.0)
+      '@redis/client': 6.2.0
+      '@redis/json': 6.2.0(@redis/client@6.2.0)
+      '@redis/search': 6.2.0(@redis/client@6.2.0)
+      '@redis/time-series': 6.2.0(@redis/client@6.2.0)
+    transitivePeerDependencies:
+      - '@node-rs/xxhash'
+      - '@opentelemetry/api'
 
   remeda@2.33.4: {}
 

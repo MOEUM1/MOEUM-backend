@@ -11,6 +11,7 @@ import historyRouter from "./routes/history.route.js";
 import leagueRouter from "./routes/league.route.js";
 import userRouter from "./routes/user.route.js";
 import analyzeRouter from "./routes/analyze.route.js";
+import { prisma } from "./lib/prisma.js";
 
 
 const app = express();
@@ -20,8 +21,14 @@ app.use(express.json());
 configurePassport();
 app.use(passport.initialize());
 
-app.use("/api/health", (_req:Request, res:Response) => {
-    res.status(200).json({ status: "ok", version: "1.0.0" });
+app.use("/api/health", async (_req:Request, res:Response) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.status(200).json({ status: "ok", version: "1.0.0", database: "ok" });
+    } catch (error) {
+        console.error("[health] database unavailable", error);
+        res.status(503).json({ status: "degraded", version: "1.0.0", database: "unavailable" });
+    }
 })
 
 app.use("/api/auth", authRouter);

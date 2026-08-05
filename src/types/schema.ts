@@ -8,7 +8,7 @@ export const signupSchema = z.object({
     email: z.string().email("이메일 형식이 올바르지 않습니다"),
     password: z.string().min(8, "비밀번호는 최소 8자 이상이어야 합니다"),
     category: z.string().min(1, "카테고리는 필수 입력값입니다"),
-    choosed: z.string()
+    choosed: z.string().min(1, "캐릭터를 선택해주세요")
 })
 
 export type SignupInput = z.infer<typeof signupSchema>

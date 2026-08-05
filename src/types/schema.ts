@@ -50,11 +50,12 @@ export type UpdateCharacterInput = z.infer<typeof updateCharacterSchema>
 
 //---------- DB 저장용 ----------
 
+// explaination 제외: iOS 는 카드 문항에서 {index, question} 만 디코드하고 해설을 표시하지 않는다.
+// 15문항분 해설을 매번 생성하느라 출제가 35% 느려진다. (퀴즈 채점의 해설은 별개로 유지)
 export const CardGameQuestionSchema = z.array(z.object({
     index: z.number(),
     question: z.string(),
     answer: z.boolean(),
-    explaination: z.string(),
 }))
 
 export const CardGameQuestionsResponseSchema = z.object({

@@ -20,6 +20,8 @@ export const generateCardGameQuestions = async (subject:string, context:string, 
             context,
             withReviewHistories(histories, CARD_QUESTION_COUNT, base)
         ),
+        // OX 출제에 깊은 추론이 필요하지 않다. 지연을 줄이려고 낮춘다.
+        reasoning: { effort: "low" },
         text: {
             format: zodTextFormat(CardGameQuestionsResponseSchema, "card_questions")
         }

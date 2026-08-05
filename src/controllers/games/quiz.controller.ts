@@ -5,7 +5,7 @@ import * as game_service from "../../services/games/index.service.js";
 import * as analyze_service from "../../services/analyze.service.js";
 import * as streak_service from "../../services/streak.service.js";
 import * as level_service from "../../services/level.service.js";
-import { memGetGameHistories, memSaveGameHistory } from "../../services/historyMemory.service.js";
+import { memGetGameHistories, memSaveGameHistory, REVIEW_HISTORY_TAKE } from "../../services/historyMemory.service.js";
 import { calcGameExp } from "../../lib/exp.js";
 import { NO_CATEGORY, NOT_FOUND_HISTORY, NOT_FOUND_USER, UNAUTHORIZED, VALIDATION_ERROR } from "../../lib/error.js";
 import type { QuizGameQuestionType, QuizGameResultReqType } from "../../types/schema.js";
@@ -22,7 +22,7 @@ export const startQuizGame = async (req: Request, res: Response) => {
     if (!subject) throw new NO_CATEGORY();
 
     const context = await analyze_service.getUserContextText(userId);
-    const recent = await memGetGameHistories(userId, 4);
+    const recent = await memGetGameHistories(userId, REVIEW_HISTORY_TAKE);
 
     const history = await quiz_service.createQuizGameHistory(userId);
     const { response: questions, conversationId } = await quiz_service.generateQuizGameQuestions(subject, context, recent);

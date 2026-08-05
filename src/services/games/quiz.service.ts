@@ -37,6 +37,7 @@ export const generateQuizGameQuestions = async (subject:string, context:string, 
         model: env.OPENAI_MODEL,
         input: prompt,
         conversation: conv.id,
+        // reasoning low 를 시도했으나 5문항 규모에선 오히려 느려서(8.5s vs 7.0s) 기본값을 쓴다.
         text: {
             format: zodTextFormat(QuizGameQuestionsResponseSchema, "quiz_questions")
         }
